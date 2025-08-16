@@ -1,0 +1,402 @@
+"use client"
+
+import { useState, useMemo } from "react"
+import { Search, Filter, Plus, BarChart3 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+
+// Sample food database with Korean and international foods
+const foodDatabase = [
+  {
+    id: 1,
+    name: "김치찌개",
+    nameEn: "Kimchi Stew",
+    calories: 105,
+    carbs: 4,
+    protein: 5,
+    fat: 6,
+    category: "국류",
+    cuisine: "한식",
+    cookingMethod: "볶음",
+    image: "/kimchi-stew.png",
+  },
+  {
+    id: 2,
+    name: "삼겹살",
+    nameEn: "Pork Belly",
+    calories: 518,
+    carbs: 0,
+    protein: 9,
+    fat: 53,
+    category: "육류",
+    cuisine: "한식",
+    cookingMethod: "구이",
+    image: "/korean-grilled-pork-belly.png",
+  },
+  {
+    id: 3,
+    name: "된장찌개",
+    nameEn: "Soybean Paste Stew",
+    calories: 89,
+    carbs: 6,
+    protein: 4,
+    fat: 5,
+    category: "국류",
+    cuisine: "한식",
+    cookingMethod: "끓임",
+    image: "/korean-soybean-paste-stew.png",
+  },
+  {
+    id: 4,
+    name: "치킨",
+    nameEn: "Fried Chicken",
+    calories: 320,
+    carbs: 8,
+    protein: 19,
+    fat: 24,
+    category: "육류",
+    cuisine: "양식",
+    cookingMethod: "튀김",
+    image: "/korean-fried-chicken.png",
+  },
+  {
+    id: 5,
+    name: "김밥",
+    nameEn: "Kimbap",
+    calories: 173,
+    carbs: 28,
+    protein: 4,
+    fat: 5,
+    category: "밥류",
+    cuisine: "한식",
+    cookingMethod: "생식",
+    image: "/korean-kimbap.png",
+  },
+  {
+    id: 6,
+    name: "떡볶이",
+    nameEn: "Tteokbokki",
+    calories: 267,
+    carbs: 58,
+    protein: 4,
+    fat: 2,
+    category: "간식",
+    cuisine: "한식",
+    cookingMethod: "조림",
+    image: "/korean-tteokbokki.png",
+  },
+  {
+    id: 7,
+    name: "아메리카노",
+    nameEn: "Americano",
+    calories: 5,
+    carbs: 1,
+    protein: 0,
+    fat: 0,
+    category: "음료",
+    cuisine: "양식",
+    cookingMethod: "기타",
+    image: "/placeholder-crefh.png",
+  },
+  {
+    id: 8,
+    name: "순두부찌개",
+    nameEn: "Soft Tofu Stew",
+    calories: 98,
+    carbs: 5,
+    protein: 6,
+    fat: 6,
+    category: "국류",
+    cuisine: "한식",
+    cookingMethod: "끓임",
+    image: "/korean-soft-tofu-stew.png",
+  },
+]
+
+const categories = ["전체", "밥류", "면류", "국류", "반찬", "간식", "음료", "과일", "육류", "해산물"]
+const cuisines = ["전체", "한식", "중식", "일식", "양식", "기타"]
+const cookingMethods = ["전체", "생식", "구이", "찜", "볶음", "튀김", "조림", "절임", "끓임", "기타"]
+const calorieRanges = [
+  { label: "전체", min: 0, max: Number.POSITIVE_INFINITY },
+  { label: "0-100kcal", min: 0, max: 100 },
+  { label: "100-200kcal", min: 100, max: 200 },
+  { label: "200-400kcal", min: 200, max: 400 },
+  { label: "400kcal 이상", min: 400, max: Number.POSITIVE_INFINITY },
+]
+
+export default function CalorieTracker() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("전체")
+  const [selectedCuisine, setSelectedCuisine] = useState("전체")
+  const [selectedCookingMethod, setSelectedCookingMethod] = useState("전체")
+  const [selectedCalorieRange, setSelectedCalorieRange] = useState(calorieRanges[0])
+  const [showFilters, setShowFilters] = useState(false)
+  const [recordedFoods, setRecordedFoods] = useState<Array<{ id: number; amount: number }>>([])
+
+  const filteredFoods = useMemo(() => {
+    return foodDatabase.filter((food) => {
+      const matchesSearch =
+        food.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        food.nameEn.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = selectedCategory === "전체" || food.category === selectedCategory
+      const matchesCuisine = selectedCuisine === "전체" || food.cuisine === selectedCuisine
+      const matchesCookingMethod = selectedCookingMethod === "전체" || food.cookingMethod === selectedCookingMethod
+      const matchesCalorieRange = food.calories >= selectedCalorieRange.min && food.calories <= selectedCalorieRange.max
+
+      return matchesSearch && matchesCategory && matchesCuisine && matchesCookingMethod && matchesCalorieRange
+    })
+  }, [searchTerm, selectedCategory, selectedCuisine, selectedCookingMethod, selectedCalorieRange])
+
+  const addToRecord = (foodId: number) => {
+    setRecordedFoods((prev) => {
+      const existing = prev.find((item) => item.id === foodId)
+      if (existing) {
+        return prev.map((item) => (item.id === foodId ? { ...item, amount: item.amount + 100 } : item))
+      }
+      return [...prev, { id: foodId, amount: 100 }]
+    })
+  }
+
+  const totalCalories = recordedFoods.reduce((total, record) => {
+    const food = foodDatabase.find((f) => f.id === record.id)
+    return total + (food ? (food.calories * record.amount) / 100 : 0)
+  }, 0)
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <h1 className="text-xl font-bold text-foreground">칼로리 탐색기</h1>
+            </div>
+            <nav className="hidden md:flex items-center gap-6">
+              <a href="#" className="text-foreground hover:text-primary transition-colors">
+                홈
+              </a>
+              <a href="#" className="text-foreground hover:text-primary transition-colors">
+                음식검색
+              </a>
+              <a href="#" className="text-foreground hover:text-primary transition-colors">
+                카테고리별
+              </a>
+              <a href="#" className="text-foreground hover:text-primary transition-colors">
+                마이기록
+              </a>
+              <a href="#" className="text-foreground hover:text-primary transition-colors">
+                정보
+              </a>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search Section */}
+        <div className="mb-8">
+          <div className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+            <Input
+              type="text"
+              placeholder="음식명을 입력하세요 (예: 김치찌개, fried chicken, 아보카도)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-12 text-lg"
+            />
+          </div>
+        </div>
+
+        {/* Filter Toggle */}
+        <div className="mb-6 flex justify-center">
+          <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2">
+            <Filter className="w-4 h-4" />
+            필터 {showFilters ? "숨기기" : "보기"}
+          </Button>
+        </div>
+
+        {/* Filters */}
+        {showFilters && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>검색 필터</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Category Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">음식 종류</Label>
+                  <div className="space-y-2">
+                    {categories.map((category) => (
+                      <div key={category} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`category-${category}`}
+                          checked={selectedCategory === category}
+                          onCheckedChange={() => setSelectedCategory(category)}
+                        />
+                        <Label htmlFor={`category-${category}`} className="text-sm">
+                          {category}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cuisine Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">음식 국가</Label>
+                  <div className="space-y-2">
+                    {cuisines.map((cuisine) => (
+                      <div key={cuisine} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`cuisine-${cuisine}`}
+                          checked={selectedCuisine === cuisine}
+                          onCheckedChange={() => setSelectedCuisine(cuisine)}
+                        />
+                        <Label htmlFor={`cuisine-${cuisine}`} className="text-sm">
+                          {cuisine}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cooking Method Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">조리 방식</Label>
+                  <div className="space-y-2">
+                    {cookingMethods.map((method) => (
+                      <div key={method} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`method-${method}`}
+                          checked={selectedCookingMethod === method}
+                          onCheckedChange={() => setSelectedCookingMethod(method)}
+                        />
+                        <Label htmlFor={`method-${method}`} className="text-sm">
+                          {method}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Calorie Range Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">칼로리 범위</Label>
+                  <div className="space-y-2">
+                    {calorieRanges.map((range) => (
+                      <div key={range.label} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`calorie-${range.label}`}
+                          checked={selectedCalorieRange.label === range.label}
+                          onCheckedChange={() => setSelectedCalorieRange(range)}
+                        />
+                        <Label htmlFor={`calorie-${range.label}`} className="text-sm">
+                          {range.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Results Count */}
+        <div className="mb-6">
+          <p className="text-muted-foreground">총 {filteredFoods.length}개의 음식이 검색되었습니다</p>
+        </div>
+
+        {/* Food Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+          {filteredFoods.map((food) => (
+            <Card key={food.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-4">
+                <div className="aspect-square mb-4 overflow-hidden rounded-lg bg-muted">
+                  <img src={food.image || "/placeholder.svg"} alt={food.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-foreground">{food.name}</h3>
+                  <p className="text-sm text-muted-foreground">{food.nameEn}</p>
+                  <div className="text-lg font-bold text-primary">
+                    {food.calories}kcal
+                    <span className="text-sm text-muted-foreground font-normal"> / 100g</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">탄수화물</span>
+                      <div className="font-medium">{food.carbs}g</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">단백질</span>
+                      <div className="font-medium">{food.protein}g</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">지방</span>
+                      <div className="font-medium">{food.fat}g</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {food.category}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {food.cuisine}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {food.cookingMethod}
+                    </Badge>
+                  </div>
+                  <Button onClick={() => addToRecord(food.id)} className="w-full gap-2" size="sm">
+                    <Plus className="w-4 h-4" />
+                    기록하기
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Daily Record Summary */}
+        {recordedFoods.length > 0 && (
+          <Card className="bg-accent/10 border-accent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                오늘 먹은 음식 기록
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-2xl font-bold text-primary">총 {Math.round(totalCalories)}kcal</div>
+                <div className="space-y-2">
+                  {recordedFoods.map((record) => {
+                    const food = foodDatabase.find((f) => f.id === record.id)
+                    if (!food) return null
+                    return (
+                      <div key={record.id} className="flex justify-between items-center py-2 border-b border-border/50">
+                        <div>
+                          <span className="font-medium">{food.name}</span>
+                          <span className="text-muted-foreground ml-2">{record.amount}g</span>
+                        </div>
+                        <div className="font-medium">{Math.round((food.calories * record.amount) / 100)}kcal</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
